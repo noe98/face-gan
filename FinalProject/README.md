@@ -1,45 +1,51 @@
-# face_gan
+# Implementing Deep Convolutional Generative Adversarial Learning of Realistic Human Faces 
 
-Authors: Griffin Noe and Utkrist P. Thapa
+Implemented by : Griffin Noe and Utkrist P. Thapa
 
 Washington and Lee University
 
 CSCI 315, Deep Learning
 
-This is a Python implementation of a DCGAN (Deep Convolutional Generative Adversarial Network) that generates faces in (128,128,3). We use CelebA dataset found here: http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html
+This is a Python implementation of a DCGAN (Deep Convolutional Generative Adversarial Network) that generates faces in (128,128,3). We use CelebA dataset found here: http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html. This implementation is based on Tensorflow and Keras. 
 
-Running Notes:
-In the attached zip, there is a folder that has 500 sample images from the data set, with minor tweaks to the code, the model can be trained on these images. 
+*Running Notes:
+In the FinalProject directory, there is a folder that has 500 sample images from the data set, with minor tweaks to the code, the model can be trained on these images.* 
 
-# Getting the Data
+
+
+## Getting the Data
 There is not much frontloaded data work as we do most of the data operations when we retrieve individual images due to the high number of images. 
 
 We first had to download the dataset at the above link and unzip the 200,000+ images into a local directory. Because there is so much data, we only access single images at a time and do preprocesses/deprocessing when we evoke the image instead of running operations on the entire dataset at the beginning. This obviously decreases the time it takes at the forefront to run the program which is important because the model saves at multiple points. This means that the faster it can get to the first 500 batch iterations, the faster we can start to evaluate the quality of the generated images. 
 
 We use the glob module to extract all the filenames in the directory of images and store them in a numpy array named filenames. We then use the train_test_split function from scikit learn to split our data with 1000 into x_test and the rest (201,599) into x_train. Again it should be noted that this operation only occurs with the numpy array of filenames, not the actual images. While a training/testing split of 201,599/1,000 seems like an absurd choice, for the purpose of GANs the testing set is not extremely important. The training set is where we actually tune the ability of the generator to deceive the discriminator and this tuning is the point of the entire GAN in this case. Therefore it is much better to have an extremely effective generator that has an overtrained discriminator than to have a mediocre generator with a perfectly trained discriminator. This is why we split the training/testing set to 201,599/1,000. 
 
-# Data Helper Functions
+
+
+## Data Helper Functions
 We created a set of helper functions that were used for various operations on the images and their pixel values, sizes, shapes, etc. 
 
-load_image:
+**load_image**:
 load image is the function that was previously mentioned that loads individual images from the directory when given an image size and the filename of that given image. This function both crops and resizes the image as the original image size of (218,178,3) was a very large image and also not an easy size to work with for a clean CNN. We first read the image in from the file name using pyplot's imread function. We then extract the width and height (r and c for rows and columns) of the image as well as the crop size we want to cut the image to. We chose 150 pretty arbitrarily as we saw many other networks use this number and we found that the images cropped to 150x150 still displayed the entirety of the celebrity's face in almost every case. We then run some basic algebra operations based on the size of the images and the size of our cropping area to set image to its newly cropped self. We then resize the cropped image to the image size specified in the function call and return that cropped, resized image. These operations are all extremely important for both minimizing training time of the network and for the ability of the generator and discriminator to be generally clean models with them getting fed in, and spitting out, clean square images. 
 
-preprocess:
+**preprocess**:
 This preprocess function is used because our generator uses the tanh activation function, which needs input data in the range of (-1,1) so we first divide the pixel value by 255 so it is between 0 and 1 then we multiply by two and subtract by one which ensures a pixel value in our tanh range. This pixel normalization is extremely important because the activation function would simply be unable to handle any images if the pixel values were not in its range. 
 
-deprocess:
+**deprocess**:
 The deprocess function simply does the inverse of preprocess and reverts the pixel values to their unsquashed values so we can display the images later. This is obviously important because we could train the model with pixel values entirely in the tanh range but would never be able to see the images unless we put the pixel values back into their natural range. 
 
-show_losses:
+**show_losses**:
 This function takes the losses arrays created in our training method and plots them. This is an important visualization in evaluating the accuracy of our generator, discriminator, and their relative accuracy. These plots are displayed in our paper for different architectures and training iterations. 
 
-show_images:
+**show_images**:
 This function takes generated images from our generator and displays them in a plot of 80 randomly selected images. This is another important visualization as the generator and discriminator losses don't always accurately convey the message and sometimes a subjective evaluation of the images created by the generator is a better marker for success than just validation scores and losses. 
 
-# Model Functions
+
+
+## Model Functions
 As this is a generative adversarial network, we had to construct a generator, a discriminator, and then put them together in order to create our GAN. 
 
-create_generator:
+**create_generator**:
 This is the function we use to create our generator network. The summary for this architecture can be found in our paper. 
 
 We take the number of initial filters for the convolutional layers, 
@@ -59,7 +65,7 @@ Each one of these transposed convolutional layers can be seen as upsampling the 
 
 Overall, we progressively stepped up this generator from our first test run with output of (32,32,3) up to (64,64,3) and then finally to (128,128,3) because we felt that the increase in training time was well worth the increase in quality as the (32,32,3) was horrible quality, the (64,64,3) was alright but nothing near realistic and (128,128,3) offered a substantial increase over the (64,64,3). 
 
-create_discriminator:
+**create_discriminator**:
 This is the function we use to create our discriminator network. The summary for this architecture can be found in our paper. 
 
 This model takes in images of size (128,128,3), downsamples them to a single output that classifies the image as a value between 0 and 1 to represent the 'realness' of the image as adjudged by the model. We feed it the initial filter value for the first convolutional layer, an alpha value for our LeakyReLU (previously discussed), a standard deviation for our kernel initializer (previously discussed), an input shape that represents the size of the images that are input to the model, the kernel size, strides, and padding for our convolutional layers and a momentum for the batch normalization (previously disccused). 
@@ -72,7 +78,7 @@ After the flatten we have a dense layer that serves as the output of the discrim
 
 Much like the generator, we progressively stepped up the size of this network. We started at (64,64,3) and this worked well for the generator creating images of (32,32,3) and (64,64,3) but by the time we bumped the generator to (128,128,3) it no longer made sense to keep the discriminator at (64,64,3). When we added the additional layer the accuracy went up drastically, most likely as the discriminator was more 'evenly matched' with the generator. 
 
-create_DCGAN:
+**create_DCGAN**:
 This is the relatively short function that instantiates a generator and discriminator based on the function calls above, compiles the discriminator, assembles the GAN from the generator and discriminiator, then compiles the GAN. 
 
 Most of the variables fed into the DCGAN function are passed directly through to the generator and discriminator functions so I will only talk on the ones not previously mentioned. 
@@ -84,7 +90,9 @@ We originally decided on a generator learning rate of 0.001 and a discriminator 
 
 Once the DCGAN is successfully compiled, we returned the gan, the generator, and the discriminator. 
 
-# Training Function
+
+
+## Training Function
 Our train function is essentially the main function of the program. All the networks are instantiated and all of the training and evaluation is done in it. 
 
 Nearly all of the variables passed through on the train method are immediately passed into network instantiation and therefore they have been explianed above. The only exceptions are the batch size, eval size, epochs, and smooth. We experimented with batch sizes ranging from 16 to 256 and found that anything under 64 was unbearably slow for training. We were only able to run 1 epoch due to how long the training took at a batch size of 16 but it did not seem to make considerable imporovements on 64. We found that the models would diverge at 128 and 256 so we decided upon a batch size of 64. If we had unlimited time to train we may have gone with 32 but it did not seem to be a noticeable drop from 32 to 64. Our evaluation size was 16 and we honestly had no guidance about what we might want this to be and it was honestly inconsequintial on the actual performance of our model so we tried a few different results with no noticeable results. We ultimately went with an epoch of 3 but this was almost entirely based on time restraints (the final 3 epoch model took about 10 hours to train) and think that if we had a dedicated machine that was not shared, a higher epoch value could have helped improve quality of the models. The last new variable is smooth which we use for label smoothing when we train our discriminator on the real data. We do this label smoothing only on the discriminator handling the real data because we don't want the discriminator to become overconfident when adjudging the realness of the real images. If we do not give it this 'restriction on confidence' via the label smoothing, it will give overly confident guesses which could have a strong detrimental impact on the ability of the generator to create realistic images. This is because the discriminator giving an absolutely confident score for every real image would train the discriminator's weight to bias against the fake data, which is great for discriminator loss but not good for the generator, which is what we care about here. We researched what degree of smoothing is appropriate and found something above 0.8 is usually what is used, we tried .8 and .9 and found they both did drastically better than 1. We found that 0.9 helped the loss of the generator and discriminator diverge less than 0.8 so we went with 0.9. 
@@ -101,5 +109,7 @@ Next we evaluate the model. As was discussed earlier, this is not extremely cent
 
 Finally we have the boolean images which when true, calls the show images function at the end of every epoch as well as show losses at the end of the entire train call as well as the show images for our selected sample from the completed model. These are so that we can get a subjective assessment of the accuracy of the model through the image generations while also quantitatively assessing the model through the losses chart. 
 
-# Calling the Train Function
+
+
+## Calling the Train Function
 All of the code that actually creates the networks and starts the training process is the train function call at the end of the code. Here, all of the hyperparameter values can be seen and a short description of each variable can be found on the same line as the variable. We store the gan, discriminator, and generator as (gan, d, g). We then convert each network into a json format using the built in .to_json() method call then write a json file with the given using the json-ized networks. This is so we can use the saved models to generate new images or to train further. 
