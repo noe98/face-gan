@@ -11,12 +11,16 @@ This is a Python implementation of a DCGAN (Deep Convolutional Generative Advers
 *Running Notes:
 In the FinalProject directory, there is a folder that has 500 sample images from the data set, with minor tweaks to the code, the model can be trained on these images.* 
 
+
+
 ## Getting the Data
 There is not much frontloaded data work as we do most of the data operations when we retrieve individual images due to the high number of images. 
 
 We first had to download the dataset at the above link and unzip the 200,000+ images into a local directory. Because there is so much data, we only access single images at a time and do preprocesses/deprocessing when we evoke the image instead of running operations on the entire dataset at the beginning. This obviously decreases the time it takes at the forefront to run the program which is important because the model saves at multiple points. This means that the faster it can get to the first 500 batch iterations, the faster we can start to evaluate the quality of the generated images. 
 
 We use the glob module to extract all the filenames in the directory of images and store them in a numpy array named filenames. We then use the train_test_split function from scikit learn to split our data with 1000 into x_test and the rest (201,599) into x_train. Again it should be noted that this operation only occurs with the numpy array of filenames, not the actual images. While a training/testing split of 201,599/1,000 seems like an absurd choice, for the purpose of GANs the testing set is not extremely important. The training set is where we actually tune the ability of the generator to deceive the discriminator and this tuning is the point of the entire GAN in this case. Therefore it is much better to have an extremely effective generator that has an overtrained discriminator than to have a mediocre generator with a perfectly trained discriminator. This is why we split the training/testing set to 201,599/1,000. 
+
+
 
 ## Data Helper Functions
 We created a set of helper functions that were used for various operations on the images and their pixel values, sizes, shapes, etc. 
@@ -35,6 +39,8 @@ This function takes the losses arrays created in our training method and plots t
 
 **show_images**:
 This function takes generated images from our generator and displays them in a plot of 80 randomly selected images. This is another important visualization as the generator and discriminator losses don't always accurately convey the message and sometimes a subjective evaluation of the images created by the generator is a better marker for success than just validation scores and losses. 
+
+
 
 ## Model Functions
 As this is a generative adversarial network, we had to construct a generator, a discriminator, and then put them together in order to create our GAN. 
@@ -84,6 +90,8 @@ We originally decided on a generator learning rate of 0.001 and a discriminator 
 
 Once the DCGAN is successfully compiled, we returned the gan, the generator, and the discriminator. 
 
+
+
 ## Training Function
 Our train function is essentially the main function of the program. All the networks are instantiated and all of the training and evaluation is done in it. 
 
@@ -100,6 +108,8 @@ We then appended a simple if statement so that every 1000 batchs (or about 3x pe
 Next we evaluate the model. As was discussed earlier, this is not extremely central to the results of our model as the subjective realism of the images is possibly more important than any validation numbers we get but we should still have the objective yard stick. We first generate the array of the filenames for our evaluation set and just as we did for the batches in training, we proprocess and load the images based on the filenames in our evaluation test. We then generate another latent space vector of size eval_size so that we can create fake images using our generator on the next line. This means that we now have a an array of the real validation images, an array of fake generated images, and we are ready to train the discriminator and gan for losses on these sets. We want to do this so that we can get a general feel of the losses of the discrimator versus the losses of the DCGAN so we can know how to best go about correcting and fine tuning the model. We first generate the discriminators loss from the real evaluation images, then the discriminators loss from the fake evaluatio images, and finally we evaluate the loss of the total gan model using the latent samples. We use these three test losses because we want to challenge the discriminator to tell between real and fake images but we also want to optimize the gan to create more accurate images. We then append these losses to our loss array declared before the loop. We again json-ize our models so that we have all three models saved at the end of every epoch in case something interesting happens between epoch iterations such as significant increases in loss. We then output a simple line that will serve as the output of our losses at the conclusion of every epoch so we can track progress. 
 
 Finally we have the boolean images which when true, calls the show images function at the end of every epoch as well as show losses at the end of the entire train call as well as the show images for our selected sample from the completed model. These are so that we can get a subjective assessment of the accuracy of the model through the image generations while also quantitatively assessing the model through the losses chart. 
+
+
 
 ## Calling the Train Function
 All of the code that actually creates the networks and starts the training process is the train function call at the end of the code. Here, all of the hyperparameter values can be seen and a short description of each variable can be found on the same line as the variable. We store the gan, discriminator, and generator as (gan, d, g). We then convert each network into a json format using the built in .to_json() method call then write a json file with the given using the json-ized networks. This is so we can use the saved models to generate new images or to train further. 
